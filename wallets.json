@@ -1,0 +1,16 @@
+{
+    "633405975": {
+        "balance": 119,
+        "energy": 60,
+        "lastEnergyUse": "2024-09-12T01:11:17.242Z",
+        "public_address": "0x32ab09d6f7dd4650bc75cb88a1f66b50",
+        "private_key": "27509a4798e0415299b9cfae373c15c2"
+    },
+    "5448785026": {
+        "balance": 65,
+        "energy": 60,
+        "lastEnergyUse": "2024-09-12T00:26:19.586Z",
+        "public_address": "0x1cae53653e7c423da7c1878447c212ae",
+        "private_key": "947a44f56ef54d41b66d99d805eab2e5"
+    }
+}

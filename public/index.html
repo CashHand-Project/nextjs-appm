@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CashHand Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+            color: white;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('https://i.ibb.co/BcHddWH/provider-plus-1.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            z-index: -1;
+            filter: brightness(20%);
+        }
+
+        #gameContainer {
+            text-align: center;
+            position: relative;
+            width: 100%;
+        }
+
+        #gameImage {
+            width: 80%;
+            height: auto;
+            max-width: 300px;
+            cursor: pointer;
+            display: block;
+            margin: 0 auto;
+        }
+
+        h1, p {
+            color: white;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+
+        p {
+            font-size: 1.2em;
+        }
+
+        #energyInfo, #balanceInfo {
+            margin-top: 10px;
+        }
+
+        #restoreTimer {
+            margin-top: 15px;
+            font-size: 1.2em;
+            color: yellow;
+        }
+
+        .error {
+            color: red;
+            font-size: 1.5em;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="gameContainer">
+    <h1>CashHand Airdrop</h1>
+    <p id="balanceInfo">Balance: 0 tokens</p>
+    <p id="energyInfo">Energy: 60/60</p>
+    <p id="restoreTimer">Restoring Energy: 00:00:00</p>
+    <img id="gameImage" src="https://cashhand.info/imagens/1.png" alt="Game Image">
+</div>
+
+<p class="error" id="errorMessage"></p>
+
+<script>
+// Função para detectar se o dispositivo é mobile
+function isMobileDevice() {
+    return /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+}
+
+// Bloquear acesso se for desktop
+if (!isMobileDevice()) {
+    document.getElementById('gameContainer').style.display = 'none';
+
+    const errorMessage = document.getElementById('errorMessage');
+    errorMessage.innerText = 'We are waiting for you on mobile! 🤳';
+    errorMessage.style.fontSize = '2em';
+    errorMessage.style.fontWeight = 'bold';
+    errorMessage.style.color = '#ffcc00';
+    errorMessage.style.backgroundColor = '#333';
+    errorMessage.style.padding = '20px';
+    errorMessage.style.borderRadius = '10px';
+    errorMessage.style.marginTop = '20px';
+    errorMessage.style.textAlign = 'center';
+    errorMessage.style.boxShadow = '0px 4px 10px rgba(0, 0, 0, 0.3)';
+} else {
+    let currentIndex = 1;
+    const maxImages = 1000;
+    let currentEnergy = 60;
+
+    // Função para pegar o user_id da URL
+    function getUserIdFromUrl() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('user_id');
+    }
+
+    // Função para carregar os dados do usuário ao iniciar o jogo
+    function loadUserData() {
+        const user_id = getUserIdFromUrl();
+
+        fetch('https://94bc-177-10-34-226.ngrok-free.app/get_user_data', {  // Substitua pelo link correto
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ user_id: user_id })
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('balanceInfo').innerText = `Balance: ${data.balance} tokens`;
+            document.getElementById('energyInfo').innerText = `Energy: ${data.energy}/60`;
+            currentEnergy = data.energy;
+
+            startRestoreTimer(data.seconds_until_restore);
+        })
+        .catch(error => {
+            document.getElementById('errorMessage').innerText = 'Erro ao comunicar com o servidor.';
+            console.error('Erro ao comunicar com o servidor:', error);
+        });
+    }
+
+    // Função para iniciar o contador regressivo de energia
+    function startRestoreTimer(seconds) {
+        const timerElement = document.getElementById('restoreTimer');
+        let remainingSeconds = seconds;
+
+        function updateTimer() {
+            const minutes = Math.floor(remainingSeconds / 60);
+            const secs = remainingSeconds % 60;
+            timerElement.innerText = `Restoring Energy: ${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            
+            if (remainingSeconds > 0) {
+                remainingSeconds--;
+            } else {
+                // Quando o tempo chegar a zero, restaurar 1 energia se não estiver em 60/60
+                if (currentEnergy < 60) {
+                    updateUserData(0, 1);
+                } else {
+                    timerElement.innerText = "Energia cheia!";
+                }
+            }
+        }
+
+        updateTimer();
+        const timerInterval = setInterval(updateTimer, 1000);
+    }
+
+    // Função para atualizar os dados do usuário após interações
+    function updateUserData(tokens = 0, energy_change = 0) {
+        const user_id = getUserIdFromUrl();
+
+        fetch('https://94bc-177-10-34-226.ngrok-free.app/update_user_data', {  // Substitua pelo link correto
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ user_id: user_id, tokens: tokens, energy_change: energy_change })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                loadUserData(); // Recarregar dados do usuário
+            } else {
+                document.getElementById('errorMessage').innerText = 'Erro ao atualizar os dados.';
+                console.error('Erro ao atualizar os dados do usuário:', data);
+            }
+        })
+        .catch(error => {
+            document.getElementById('errorMessage').innerText = 'Erro ao comunicar com o servidor.';
+            console.error('Erro ao comunicar com o servidor:', error);
+        });
+    }
+
+    // Função para atualizar a imagem do jogo
+    function updateGameImage() {
+        const imageUrl = `https://cashhand.info/imagens/${currentIndex}.png`;
+        document.getElementById('gameImage').src = imageUrl;
+        currentIndex = (currentIndex % maxImages) + 1;
+    }
+
+    // Função para permitir ou bloquear ganho de tokens com base na energia
+    function attemptToEarnTokens() {
+        if (currentEnergy > 0) {
+            updateUserData(1, -1); // Ganha 1 token e perde 1 energia
+            updateGameImage();
+        } else {
+            alert("Você está sem energia! Aguarde a restauração de energia.");
+        }
+    }
+
+    // Função para adicionar eventos de clique e toque
+    function addClickAndTouchEvents() {
+        const gameImage = document.getElementById('gameImage');
+
+        gameImage.addEventListener('click', function(event) {
+            event.preventDefault();
+            attemptToEarnTokens();
+        });
+
+        gameImage.addEventListener('touchend', function(event) {
+            event.preventDefault();
+            attemptToEarnTokens();
+        }, { passive: false });
+    }
+
+    // Carrega os dados do usuário e adiciona eventos
+    document.addEventListener('DOMContentLoaded', function() {
+        loadUserData();
+        addClickAndTouchEvents();
+    });
+}
+</script>
+
+</body>
+</html>
